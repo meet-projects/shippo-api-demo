@@ -1,0 +1,163 @@
+{% load staticfiles %}
+<!DOCTYPE html>
+<html>
+   <head>
+      <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css">
+      <link rel="stylesheet" href="https://shippo-static.s3.amazonaws.com/css/style_v2.css"/>
+      <link rel="stylesheet" href="//cdn.datatables.net/1.10.2/css/jquery.dataTables.min.css"/>
+      <link href='http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/css'>
+      <title>Shippo Rate Calculator</title>
+      <script type="text/javascript" src="http://maps.googleapis.com/maps/api/js?libraries=places"></script>
+   </head>
+   <body>
+      <div class="container">
+         <form role="ship-request" id="home-form" method="GET" action="{% url 'shipping_calc:home' %}">
+            <div id="form-locations">
+               <h3 class="text-center">Shippo Rate Calculator</h3>
+               <h4 class="text-center">(U.S shipments only)</h4>
+               <div class="row">
+                  <div class="font-md semibold margin-b-xxs col-sm-6 col-xs-12">
+                     From
+                  </div>
+                  <div class="font-md semibold margin-b-xxs col-sm-6 hidden-xs">
+                     To
+                  </div>
+               </div>
+               <div class="row">
+                  <div class="form-group col-sm-6 col-xs-12" id="flag-fromcountry-group">
+                     <input type="text" class="form-control from-field" id="google-from" name="from_zipcode" placeholder="ZIP" value="{{request.from_zipcode}}" required>
+                  </div>
+                  <!--show label To only on mobile in new row -->
+                  <div class="font-md semibold margin-b-xxs col-xs-12 visible-xs">
+                     To
+                  </div>
+                  <div class="form-group col-sm-6 col-xs-12" id="flag-tocountry-group">
+                     <input type="text" class="form-control to-field" id="google-to" name="to_zipcode" placeholder="ZIP" value="{{request.to_zipcode}}" required>
+                  </div>
+               </div>
+            </div>
+            <div id="form-dimweightamount">
+               <div class="row">
+                  <div class="font-md semibold margin-b-xxs col-sm-6 col-xs-12">
+                     Dimensions
+                  </div>
+                  <div class="font-md semibold margin-b-xxs col-sm-6 hidden-xs">
+                     Weight
+                  </div>
+               </div>
+               <div class="row">
+                  <div class="form-group col-sm-6 col-xs-12">
+                     <div class="row">
+                        <div class="col-sm-9 col-xs-12">
+                           <div class="pull-left width-30p">
+                              <input required type="number" step="any" value="{{request.parcel_length}}" class="form-control" id="ship-length" placeholder="length" name="parcel_length">
+                           </div>
+                           <div class="pull-left height-34 lh-34 width-05p text-center">
+                              <p>x
+                              <p>
+                           </div>
+                           <div class="pull-left width-30p">
+                              <input required type="number" step="any" value="{{request.parcel_width}}" class="form-control" id="ship-width" placeholder="width" name="parcel_width">
+                           </div>
+                           <div class="pull-left height-34 lh-34 width-05p text-center">
+                              <p>x
+                              <p>
+                           </div>
+                           <div class="pull-left width-30p">
+                              <input required type="number" step="any" value="{{request.parcel_height}}" class="form-control" id="ship-height" placeholder="height" name="parcel_height">
+                           </div>
+                        </div>
+                        <div class="col-sm-3 col-xs-6 margin-sm-t-sm">
+                           <div class="input-wrapper">
+                              <div class="select-styled select-styled-default">
+                                 <select id="dimensionunit-select" class="form-control select-blank" name="dimensions_unit">
+                                 <option value="in" active {%if request.dimensions_unit == 'in'%}selected{%endif%}>
+                                 inches</option>
+                                 <option value="cm" {%if request.dimensions_unit == 'cm'%}selected{%endif%}>cm</option>
+                                 </select>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+                  <div class="visible-xs">
+                     <div class="font-md semibold margin-b-xxs col-xs-12">
+                        Weight
+                     </div>
+                  </div>
+                  <div class="form-group col-sm-4 col-xs-12">
+                     <div class="row">
+                        <div class="col-sm-6 col-xs-8">
+                           <input required type="number" step="any" class="form-control " id="parcel_weight" placeholder="weight" name="parcel_weight" value="{{request.parcel_weight}}">
+                        </div>
+                        <div class="col-md-4 col-sm-6 col-xs-6 margin-sm-t-sm">
+                           <div class="input-wrapper">
+                              <div class="select-styled select-styled-default">
+                                 <select id="weightunit-select" class="form-control select-blank" name="mass_unit">
+                                 <option value="lb"
+                                 {%if request.mass_unit == "lb"%}selected{%endif%}>lbs
+                                 </option>
+                                 <option value="oz" {%if request.mass_unit == 'oz'%}selected{%endif%}>
+                                 oz</option>
+                                 <option value="kg" {%if request.mass_unit == 'kg'%}selected{%endif%}>
+                                 kg</option>
+                                 </select>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            </div>
+            <div class="padding-t-sm text-center">
+               <button type="submit" class="btn btn-primary btn-lg" id="shipsubmit"><i class="fa fa-truck"></i>&nbsp;&nbsp;Get Shipping Rates&nbsp;</button>
+            </div>
+         </form>
+      </div>
+      <!-- /.container -->
+      <br>
+      {% if rates%}
+      <table id="rates_result" class="container">
+         <thead>
+            <tr class="row">
+               <th>Provider</th>
+               <th>Service name</th>
+               <th>Delivery Info</th>
+               <th>Price</th>
+            </tr>
+         </thead>
+         <tbody>
+            {%for rate in rates%}
+            <tr class="row" style="margin-top:25px">
+               <td class="addr col-md-2 col-lg-2">
+                  <img width="45" style="margin-top:15px" src="{{rate.provider_image_200}}">
+               </td>
+               <td class="addr col-md-4 col-lg-4">
+                  <span>{{rate.provider}} {{rate.servicelevel.name}}</span>
+               </td>
+               <td class="addr col-md-3 col-lg-3">
+                  <span id="to">{{rate.estimated_days}} days</span>
+               </td>
+               <td class="addr col-md-1 col-lg-1">
+                  <span>${{rate.amount_local}}</span>
+               </td>
+            </tr>
+            {% endfor %}
+         </tbody>
+      </table>
+      {% endif%}
+      <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+      <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.3/js/bootstrap.min.js"></script>
+      <script src="//cdn.datatables.net/1.10.2/js/jquery.dataTables.min.js"></script>
+      <script type="text/javascript">
+         $(document).ready(function(){
+            $('#rates_result').dataTable({
+               "paging":false,
+               "searching":   false,
+               "aoColumnDefs": [{ 'bSortable': false, 'aTargets': [ 0 ] }],
+               "order": [[ 3, "asc" ]]
+         });
+         });
+      </script>
+   </body>
+</html>
